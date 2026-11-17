@@ -1,24 +1,9 @@
 
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import ProfileCard from '@/components/profile-card';
-import { useState } from 'react';
+import SwipeDeck from '@/components/swipe-deck';
 
 export default function DiscoverScreen() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  function handleLike() {
-  if (currentIndex < profiles.length) {
-    setCurrentIndex(prev => prev + 1);
-  }
-}
-
-  function handlePass() {
-    if (currentIndex < profiles.length) {
-      setCurrentIndex(prev => prev + 1);
-    }
-    
-  }
 
   const profiles = [
   {
@@ -40,36 +25,15 @@ export default function DiscoverScreen() {
     bio: "Photography enthusiast"
   }
 ];
-if (currentIndex >= profiles.length) {
 
-}
-const currentProfile = profiles[currentIndex];
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>Spark</Text>
 
-        {currentProfile ? (
-  <View>
-    <ProfileCard
-      name={currentProfile.name}
-      age={currentProfile.age}
-      bio={currentProfile.bio}
-    />
-
-    <Pressable onPress={handleLike}>
-      <Text>Like</Text>
-    </Pressable>
-
-    <Pressable onPress={handlePass}>
-      <Text>Pass</Text>
-    </Pressable>
-  </View>
-) : (
-  <Text>No more profiles available!</Text>
-)}
-    </View>  
+        <SwipeDeck profiles={profiles} />
+      </View>
     </SafeAreaView>
   );
 }
