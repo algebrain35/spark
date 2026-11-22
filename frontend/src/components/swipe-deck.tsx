@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text} from 'react-native';
 import ProfileCard from '@/components/profile-card';
 import SwipeActions from '@/components/swipe-actions';
-import { scheduleOnRN } from 'react-native-worklets';
+import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 import {
   usePanGesture,
   GestureDetector,
@@ -28,12 +28,19 @@ type SwipeDeckProps = {
 
 export default function SwipeDeck({ profiles }: SwipeDeckProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
+    const currentProfile = profiles[currentIndex];
+    const translateX = useSharedValue(0);
+    const isAnimating = useSharedValue(false);
     
     function nextProfile() {
   setCurrentIndex(prev =>
     prev < profiles.length ? prev + 1 : prev
   );
 }
+
+useEffect(() => {
+  isAnimating.value = false;
+}, [currentIndex]);
 
  function handleLike() {
   console.log("Liked:", profiles[currentIndex]?.name);
@@ -45,29 +52,52 @@ export default function SwipeDeck({ profiles }: SwipeDeckProps) {
     nextProfile();
  }
 
-  const currentProfile = profiles[currentIndex];
-  const translateX = useSharedValue(0);
+ const animateSwipe = (direction: 'like' | 'pass') => {
+  'worklet';
+
+  if (isAnimating.value) {
+    return;
+  }
+
+  isAnimating.value = true;
+
+  const destination = direction === 'like' ? 500 : -500;
+
+  translateX.value = withTiming(destination, { duration: 250 }, (finished) => {
+  if (finished) {
+    translateX.value = 0;
+
+    if (direction === 'like') {
+      scheduleOnRN(handleLike);
+    } else {
+      scheduleOnRN(handlePass);
+    }
+  } else {
+    isAnimating.value = false;
+    translateX.value = 0;
+  }
+});
+};
+
+  
 
  const panGesture = usePanGesture({
   onUpdate: (event) => {
+    if (isAnimating.value){
+      return;
+    }
     translateX.value = event.translationX;
   },
    onDeactivate: () => {
+    if (isAnimating.value) {
+      return;
+    }
     if (translateX.value > SWIPE_THRESHOLD) {
-  translateX.value = withTiming(500, { duration: 250 }, (finished) => {
-  if (finished) {
-    translateX.value = 0;
-    scheduleOnRN(handleLike);
-  }
-});
+      animateSwipe('like');
   
 } else if (translateX.value < -SWIPE_THRESHOLD) {
-  translateX.value = withTiming(-500, { duration: 250 }, (finished) => {
-  if (finished) {
-    translateX.value = 0;
-    scheduleOnRN(handlePass);
-  }
-});
+  animateSwipe('pass');
+
 } else {
   translateX.value = withSpring(0);
 }
@@ -94,7 +124,7 @@ const animatedStyle = useAnimatedStyle(() => {
       </Animated.View>
     </GestureDetector>
 
-    <SwipeActions onLike={handleLike} onPass={handlePass} />
+    <SwipeActions onLike={() => scheduleOnUI(animateSwipe, 'like')} onPass={() => scheduleOnUI(animateSwipe, 'pass')} />
   </View>
 ) : (
   <Text>No more profiles available!</Text>
